@@ -1,0 +1,12 @@
+---
+description: Shared appearance comes from global.scss and variables.scss; component SCSS is layout only
+globs: frontend/**/*.{tsx,scss}
+alwaysApply: false
+---
+
+- All interactive elements (buttons, inputs, labels) derive their base appearance from `global.scss` and `variables.scss`. Component-specific SCSS files must NOT redefine button backgrounds, colors, borders, font families, or input field styles that are already established globally.
+- Component SCSS files should only contain styles that are **uniquely specific to that component's layout and positioning**: grid column counts, flex direction, absolute positioning offsets, aspect ratios, and similar structural concerns.
+- Shared visual patterns (surface colors, text colors, border styles, border-radius, font-size scaling) must use the tokens defined in `variables.scss` (for example `$color-surface`, `$color-text`, `$color-border`). Do not invent new color values inline in component files.
+- Use `@include cq-responsive((...))` from `mixins.scss` for any dimension that should scale with container size (padding, gap, width, border-radius). Do not use fixed `px` or `rem` values for these properties inside views that live within `view-content`.
+- Elements that appear across multiple views (`view-title`, `button`, `input`, `select`, `table`) are styled once in `global.scss`. If a component needs a size or spacing override for one of these, it only sets the differing property, not the full element style.
+- Job type colours come from the palette tokens in `variables.scss` through the `.job-type-colour-<number>` classes; never hard-code a category colour in a component.

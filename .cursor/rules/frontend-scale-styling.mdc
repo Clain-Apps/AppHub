@@ -1,0 +1,11 @@
+---
+description: Frontend scale - container-type, cqw/cqh, cq-responsive mixin
+globs: frontend/**/*.{tsx,scss}
+alwaysApply: false
+---
+
+- Use `container-type: size` on the shells that should define cqw/cqh (`app-container`, `app-content`, `view-container`, etc.).
+- `cq-responsive` in `mixins.scss`: unitless numbers become portrait **cqw**, landscape **cqh**. No other modes - if you need a different mapping, write cqw/cqh by hand.
+- Do not `@include cq-responsive` inside `.is-portrait &` / `.is-landscape &` (it already writes those selectors and would break them).
+- Skip the mixin when numbers or units differ per orientation, or when you want a fixed axis (for example both max dimensions in cqw only).
+- The base `font-size` is written by hand once on `app-container` for each orientation; everything below it may use `em`.

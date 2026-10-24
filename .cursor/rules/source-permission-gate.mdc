@@ -1,0 +1,12 @@
+---
+description: A collector may only be added for a registry source whose terms permit automated collection
+alwaysApply: false
+globs: "backend/src/collectors/**/*.ts,backend/src/source-registry/**/*.ts,shared/src/sourceRegistry*.ts,shared/src/permission.ts"
+---
+
+- Every data source has an entry in the source registry (`shared/src/sourceRegistrySeed.ts`, mirrored in `evidence.source`) with its permission status, terms address, date checked, retention rule, rate and cost limits and independence group.
+- An automated collector may only exist and only be enabled for a source whose status is `officialDataset`, `officialApiPermitted`, or `writtenPermissionGranted` with a recorded reference to the written permission. The application (`decideCollectorEnablement`) and a database check constraint both enforce this.
+- Sources that are `writtenPermissionRequired`, `prohibited`, `restricted` or `defunct` stay in the registry with their limitations. Do not implement a collector for them because the technology makes it possible. Do not add evasion (proxy rotation, CAPTCHA bypass, disguised clients).
+- `restricted` sources (for example the Google Places API) may not store content beyond what their terms allow and may not be combined with non-Google maps.
+- Manual and first-party evidence is always allowed, but each observation records its `permissionBasis`. Observations without an acceptable basis are shown but excluded from calculations (`evaluateObservationEligibility`).
+- Adding a collector needs: a registry entry checked against the live terms, rate and cost limits, a fixture-based parser test, audit counters, and failure isolation.

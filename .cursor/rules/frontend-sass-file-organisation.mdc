@@ -1,0 +1,60 @@
+---
+description: Nested selectors that mirror the DOM; structure written again for each layout state
+globs: frontend/**/*.{tsx,scss}
+alwaysApply: false
+---
+
+- Selectors are nested the same way the elements are nested in the DOM.
+
+```scss
+.observations-view {
+  .observation-filters {
+    .filter-field {
+      label {
+      }
+      select {
+      }
+    }
+  }
+  .observation-table {
+    thead {
+      th {
+      }
+    }
+    tbody {
+      tr {
+        td {
+        }
+      }
+    }
+  }
+}
+```
+
+- Never use `data-*` attributes for styling. Use classes: `.is-empty`, `.is-active`, `.is-disabled`, `.is-low-sample`.
+
+- When the layout changes by orientation or another state class, the styles are applied in a copy of the same structure, scoped to that state context.
+
+```scss
+.observations-view {
+  .is-landscape & {
+    .observation-filters {
+      .filter-field {
+      }
+    }
+    .observation-table {
+    }
+  }
+
+  .is-portrait & {
+    .observation-filters {
+      .filter-field {
+      }
+    }
+    .observation-table {
+    }
+  }
+}
+```
+
+- One SCSS file per feature folder, imported by the component that owns the root element.

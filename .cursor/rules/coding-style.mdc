@@ -1,0 +1,89 @@
+---
+description: General code style - no classes, named functions, factory pattern, structured errors, semantic and accessible markup
+alwaysApply: true
+---
+
+- Do not use classes. Use plain functions, closures, and objects instead.
+- Prefer named function declarations (`function foo()`) over arrow-assigned variables for top-level definitions.
+- For stateful modules, use a factory function that returns an object of methods closing over local variables rather than a `class` with `this`.
+- Function components as `export function Name(){}` (no default exports).
+- Use SCSS files for styling, organized by feature folder. No TypeScript style objects.
+- Use semantic HTML and make every control accessible: labelled form controls, real `button` and `a` elements, table headers, and alternative text (`alt`) for informative images. Use `aria-*` and `role` only where native semantics are not enough.
+- Never use abbreviations or acronyms in variable names, function names, or type names. Every name must be fully descriptive so a human can understand its meaning at a glance. Code is read far more than it is written - optimise for cognitive ease, not keystroke economy. `slotWithPosition` not `swp`, `aspectRatio` not `ar`, `connector` not `conn`, `repository` not `repo`, `identifier` not `id`, `webAddress` not `url`.
+  - Names fixed by a library or the language (`Promise`, `JSON`, a library's own export) are fine. MongoDB-style `_id` does not apply here.
+
+## Errors
+
+- Throw `Error` objects so stack traces are kept. Never throw strings.
+- Classes are banned, so structured errors come from a factory in `shared/`:
+
+```typescript
+throw createApplicationError("observationNotFound", "The observation does not exist", { observationIdentifier });
+```
+
+- `createApplicationError(code, message, details?)` returns an `Error` carrying a stable `code` string and optional `details`. Callers branch on `code`, never on message text.
+
+## Extracting logic
+
+- When a block of logic has a clear meaning, extract it into a named function. Name the function after what it does, not how it does it.
+- If that helper is only used inside one parent function, nest it there as a local function declaration. Nesting makes the scope obvious: the helper exists only for that parent, and is not a reusable module export.
+
+```typescript
+// BAD - helper looks like a shared module export, even though only one caller uses it
+export function observationHasMeasuredValue(observation: Observation): boolean {
+  return Number.isFinite(observation.value);
+}
+
+export function claimHasMeasuredValues(observations: Observation[]): boolean {
+  return observations.every(observationHasMeasuredValue);
+}
+
+// GOOD - helper is nested, so its scope and purpose are obvious
+export function claimHasMeasuredValues(observations: Observation[]): boolean {
+  return observations.every(observationHasMeasuredValue);
+
+  function observationHasMeasuredValue(observation: Observation): boolean {
+    return Number.isFinite(observation.value);
+  }
+}
+```
+
+
+## Function parameters
+
+Do not define functions with multiple positional parameters like this:
+
+```typescript
+log(level: LogLevel, event: string, fields?: Record<string, string | number | boolean | null>): void;
+```
+
+At the call site, it is not clear what each value represents:
+
+```typescript
+logger.log("info", "backendStopping", { signal });
+```
+
+Instead, define the function with one destructured object parameter:
+
+```typescript
+type LogParams = {
+  level: LogLevel;
+  event: string;
+  fields?: Record<string, string | number | boolean | null>;
+}
+export type Logger = {
+  log({level, event, fields}: LogParams): void;
+}
+```
+
+This makes the call site look like this:
+
+```typescript
+logger.log({
+  level: "info",
+  event: "backendStopping",
+  fields: { signal },
+});
+```
+
+This makes it easy to see at a glance that `"info"` is the level and `"backendStopping"` is the event.

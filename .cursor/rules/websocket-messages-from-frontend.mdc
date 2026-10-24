@@ -1,0 +1,45 @@
+---
+description: WebSocket messages from frontend - registry, derived types, request/response shape, push events
+alwaysApply: false
+globs: "backend/src/messages-from-frontend/**/*.ts,shared/src/messageToBackend.ts,shared/src/eventFromBackend.ts,**/websockets.service.ts,backend/src/webSocketServer.ts"
+---
+
+# WebSocket messages from frontend
+
+Complements `.cursor/rules/architecture-shared-backend.mdc` (shared contracts). This rule is the handler registry plus the derived `MessageToBackend` pattern. Messages are both commands and queries. Each is a request that gets exactly one response.
+
+## Source of truth (do not bypass)
+
+- **Registry and lookup:** `backend/src/messages-from-frontend/messages-from-frontend.ts` - `messagesFromFrontend`, `MessagesFromFrontend`, `getMessageHandler`.
+- **Derived types:** `shared/src/messageToBackend.ts` - `MessageName`, `MessageData`, `MessageResult`, `MessageToBackend` inferred from `MessagesFromFrontend` and the handler `(backendService, data)` signatures and return types.
+- **Dispatcher:** `backend/src/webSocketServer.ts` - keep generic: `getMessageHandler(message)(backendService, data)`; do not branch per message here.
+- **Frontend send:** `frontend/src/services/websockets.service.ts` - `send({ message, data })` returns a promise of the derived `MessageResult`; it holds the one frontend type assertion, because the wire carries untyped JSON.
+- **Push events:** `shared/src/eventFromBackend.ts` is the only union of events the backend may push. The frontend must subscribe to a topic first; the backend pushes only to subscribers.
+
+## Envelope
+
+- Request: `{ correlationIdentifier, message, data }`.
+- Response: `{ correlationIdentifier, result }` or `{ correlationIdentifier, error: { code, message } }`. The error comes from `createApplicationError`.
+- The connection is only accepted after the session cookie and the request origin are verified.
+
+## Handler shape
+
+Each frontend-callable message is a **named export**:
+
+`(backendService: BackendService, data: PayloadObject) => Result | Promise<Result>`
+
+- **Payloads are objects only:** `data: { observationIdentifier: string }` - never positional arrays.
+- **Validate first:** the first statement of every handler parses `data` with its colocated `zod` schema (`parseMessageData(schema, data)`), and the handler's `data` type is `z.infer` of that schema.
+- **Results are serialisable and small.** Queries are paginated and filtered. Never return a whole table or a replicated application state.
+
+## Adding a message
+
+1. Add the backend function under `backend/src/messages-from-frontend/<name>/`.
+2. Register it on `messagesFromFrontend` in `messages-from-frontend.ts`.
+3. Rely on types updating automatically; call `send({ message: "<key>", data: { ... } })` on the frontend.
+
+## Do not
+
+- Wrapper functions around handlers for typing or dispatch.
+- Duplicate message names or manually define message, payload or result types that `shared/src/messageToBackend.ts` already derives.
+- Extra type assertions. The only two allowed are in `getMessageHandler` in `messages-from-frontend.ts` (TypeScript's indexed-access limitation) and the result of `send` in `websockets.service.ts` (untyped JSON on the wire).

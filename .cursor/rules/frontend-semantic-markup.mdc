@@ -1,0 +1,14 @@
+---
+description: Semantic HTML, accessible controls, descriptive class names, state classes
+globs: frontend/**/*.{tsx,scss}
+alwaysApply: false
+---
+
+- Use standard semantic elements: `main`, `header`, `nav`, `section`, `article`, `aside`, `footer`, `table` with `thead`/`tbody`/`th`, `ul`/`li`, `dl`, `form`, `fieldset`/`legend`, `label`, `button`, `a`.
+- Use `div` or `span` only when there is no suitable semantic element, and give them a descriptive class name.
+- Every form control has a visible `label` (or wraps its control in one). Icon-only controls are not used.
+- Informative images and charts have alternative text (`alt` on `img`, `<title>` on `svg`, plus a table of the same figures nearby). Decorative images have an empty `alt`.
+- Use `aria-*` and `role` only where native semantics are not enough (for example `aria-live` for progress messages, `aria-current` on the active view button).
+- Name structural class names after what the element is: `observation-filters`, `coverage-matrix`, not `box` or `flex-row`.
+- Express element state with `.is-*` classes (`.is-active`, `.is-disabled`, `.is-missing`, `.is-low-sample`). Never use `data-*` attributes for styling.
+- Nest SCSS selectors to match the DOM hierarchy (see `frontend-sass-file-organisation.mdc`).

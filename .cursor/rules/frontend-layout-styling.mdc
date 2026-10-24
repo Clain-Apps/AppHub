@@ -1,0 +1,10 @@
+---
+description: Frontend layout - orientation classes and DOM-specific SCSS
+globs: frontend/**/*.{tsx,scss}
+alwaysApply: false
+---
+
+- `app-container` has `is-portrait` or `is-landscape` (see `App.tsx`).
+- Orientation-specific layout: nest `.is-portrait &` / `.is-landscape &` under the component root; match the real DOM (see `frontend-sass-file-organisation.mdc`).
+- Views may use a different JSX structure by orientation (for example a table on landscape and a stacked list on portrait). Do not assume the same wrapper tree.
+- Data tables stay `table` elements on landscape and become stacked rows on portrait through SCSS, not a second component, unless the markup genuinely differs.

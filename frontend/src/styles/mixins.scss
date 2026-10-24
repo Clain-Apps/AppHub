@@ -1,0 +1,17 @@
+@mixin cq-responsive($properties) {
+  @each $property, $value in $properties {
+    @if type-of($value)==number and unitless($value) {
+
+      // AppHub is a max-width card sized by its content, so container queries use
+      // inline-size only. Unitless values always map to cqw for both orientations.
+      .is-portrait &,
+      .is-landscape & {
+        #{$property}: #{$value}cqw;
+      }
+    }
+
+    @else {
+      #{$property}: $value;
+    }
+  }
+}

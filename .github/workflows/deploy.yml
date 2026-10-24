@@ -1,0 +1,148 @@
+# Reuse this workflow in another repository by changing the values below and the
+# concurrency group so it stays unique to that application.
+# APP_NAME allapps deploys only to /apps/allapps/. It never syncs the whole /apps tree.
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-allapps
+  cancel-in-progress: false
+
+env:
+  APP_NAME: allapps
+  DEPLOY_ROOT: /apps
+  DEPLOY_USER: deploy
+  # Vite writes the production frontend here. The Node backend serves this directory.
+  BUILD_OUTPUT: frontend/dist
+  SERVICE_NAME: allapps
+  BACKEND_PORT: "3001"
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: Require deployment secrets
+        env:
+          FLOWVPS_HOST: ${{ secrets.FLOWVPS_HOST }}
+          FLOWVPS_SSH_KEY: ${{ secrets.FLOWVPS_SSH_KEY }}
+          FLOWVPS_KNOWN_HOSTS: ${{ secrets.FLOWVPS_KNOWN_HOSTS }}
+        run: |
+          set -euo pipefail
+          test -n "$FLOWVPS_HOST" || { echo "Set the FLOWVPS_HOST secret."; exit 1; }
+          test -n "$FLOWVPS_SSH_KEY" || { echo "Set the FLOWVPS_SSH_KEY secret."; exit 1; }
+          test -n "$FLOWVPS_KNOWN_HOSTS" || { echo "Set the FLOWVPS_KNOWN_HOSTS secret."; exit 1; }
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run checks and tests
+        run: npm run check
+
+      - name: Build the production frontend
+        run: PUBLIC_PATH_PREFIX="/${APP_NAME}" npm run build
+
+      - name: Keep production dependencies
+        run: |
+          set -euo pipefail
+          npm prune --omit=dev
+          test -f node_modules/tsx/package.json
+          test -e node_modules/apphub-shared/src/index.ts
+          test -x node_modules/.bin/tsx
+
+      - name: Stage the release
+        run: |
+          set -euo pipefail
+          stage="${RUNNER_TEMP}/apphub-release"
+          rm -rf "$stage"
+          mkdir -p "$stage/$(dirname "$BUILD_OUTPUT")"
+          cp package.json package-lock.json "$stage/"
+          rsync -a --exclude '*.test.ts' --exclude 'vitest.config.ts' shared/ "$stage/shared/"
+          rsync -a --exclude '*.test.ts' --exclude 'vitest.config.ts' backend/ "$stage/backend/"
+          rsync -a "${BUILD_OUTPUT}/" "$stage/${BUILD_OUTPUT}/"
+          rsync -a node_modules/ "$stage/node_modules/"
+          test -s "$stage/${BUILD_OUTPUT}/index.html"
+          if find "$stage/shared" "$stage/backend" "$stage/frontend" \( -name '.env' -o -name '.env.*' \) | grep -q .; then
+            echo "Refusing to deploy environment files."
+            exit 1
+          fi
+          if [[ -e "$stage/.git" ]]; then
+            echo "Refusing to deploy Git history."
+            exit 1
+          fi
+
+      - name: Configure SSH
+        env:
+          FLOWVPS_SSH_KEY: ${{ secrets.FLOWVPS_SSH_KEY }}
+          FLOWVPS_KNOWN_HOSTS: ${{ secrets.FLOWVPS_KNOWN_HOSTS }}
+        run: |
+          set -euo pipefail
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          printf '%s\n' "$FLOWVPS_SSH_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          printf '%s\n' "$FLOWVPS_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          chmod 644 ~/.ssh/known_hosts
+
+      - name: Upload the release
+        env:
+          FLOWVPS_HOST: ${{ secrets.FLOWVPS_HOST }}
+        run: |
+          set -euo pipefail
+          if [[ ! "$APP_NAME" =~ ^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?$ ]]; then
+            echo "APP_NAME must be a single directory name."
+            exit 1
+          fi
+          if [[ ! "$DEPLOY_ROOT" =~ ^(/[A-Za-z0-9._-]+)+$ ]]; then
+            echo "DEPLOY_ROOT must be an absolute directory path."
+            exit 1
+          fi
+          release_id="${GITHUB_SHA}-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          if [[ ! "$release_id" =~ ^[0-9a-f]+-[0-9]+-[0-9]+$ ]]; then
+            echo "The release id is not safe to use as a directory name."
+            exit 1
+          fi
+          destination="${DEPLOY_ROOT}/${APP_NAME}/releases/${release_id}"
+          releases_directory="${DEPLOY_ROOT}/${APP_NAME}/releases"
+          remote="${DEPLOY_USER}@${FLOWVPS_HOST}"
+          ssh_command="ssh -i ${HOME}/.ssh/deploy_key -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile=${HOME}/.ssh/known_hosts"
+          echo "release_id=${release_id}" >> "$GITHUB_ENV"
+          ssh $ssh_command "$remote" "$(printf 'mkdir -p -- %q' "$destination")"
+          if ! rsync -az -e "$ssh_command" "${RUNNER_TEMP}/apphub-release/" "${remote}:${destination}/"; then
+            remote_command="$(printf 'destination=%q releases_directory=%q bash -s' "$destination" "$releases_directory")"
+            printf '%s\n' \
+              'set -euo pipefail' \
+              'case "$destination" in' \
+              '  "$releases_directory"/*) rm -rf -- "$destination" ;;' \
+              '  *) echo "Refusing to delete an unexpected path." >&2; exit 1 ;;' \
+              'esac' | ssh $ssh_command "$remote" "$remote_command"
+            exit 1
+          fi
+
+      - name: Activate the release
+        env:
+          FLOWVPS_HOST: ${{ secrets.FLOWVPS_HOST }}
+        run: |
+          set -euo pipefail
+          ssh_command="ssh -i ${HOME}/.ssh/deploy_key -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile=${HOME}/.ssh/known_hosts"
+          remote="${DEPLOY_USER}@${FLOWVPS_HOST}"
+          health_url="http://127.0.0.1:${BACKEND_PORT}/api/health"
+          remote_command="$(printf 'APP_NAME=%q DEPLOY_ROOT=%q RELEASE_ID=%q SERVICE_NAME=%q HEALTH_URL=%q bash -s' "$APP_NAME" "$DEPLOY_ROOT" "$release_id" "$SERVICE_NAME" "$health_url")"
+          ssh $ssh_command "$remote" "$remote_command" < deploy/activate-release.sh
+
+      - name: Remove the SSH key
+        if: always()
+        run: rm -f ~/.ssh/deploy_key

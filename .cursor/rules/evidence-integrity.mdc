@@ -1,0 +1,18 @@
+---
+description: Evidence integrity - traceability, no unsupported profit claims, simulated data isolation
+alwaysApply: true
+---
+
+This app finds and validates opportunities. It must never manufacture confidence. Every output answers: what do we know, how do we know it, what is uncertain, and what would most improve the next decision.
+
+- **Traceability:** every number shown to the user traces from an assessment input to a claim, assumption or explicit unknown, then to observations, then to the raw record and its collection run or documented origin.
+- **Immutable evidence:** observations are append-only. A correction is a new observation that supersedes the old one. Never update or delete an observation, except through the retention purge.
+- **Provenance types:** `officialDataset`, `publicWebRecord`, `directContractorQuotation`, `customerInterview`, `ownAdvertisingCampaign`, `completedJob`. Each type has its own required fields, and only `publicWebRecord` requires a public web address. Every observation carries a `permissionBasis`.
+- **Identity:** use a stable source identifier or an explicit `observationReference`. A content fingerprint may only raise a duplicate warning; it never merges or rejects a first-party observation. Two contractors quoting the same amount are two observations.
+- **Comparability:** never combine different measure kinds, units, scope buckets or location levels into one figure. Never use an employee wage benchmark as subcontractor delivery cost unless an explicit, justified assumption says so.
+- **Corroboration is not validation:** agreement between published or quoted prices is `corroborated`. Only real business outcomes (completed jobs, recorded spend and bookings) can make an opportunity `commerciallyValidated`.
+- **Unknowns stay unknown:** if a required contribution input is unknown, report profitability as unverified and name the missing input. Missing data is never low demand. A disappearing listing is never a completed job.
+- **Failed runs:** a failed, partial or low-coverage collection run never creates a trend point or a status change; the gap is recorded.
+- **Simulated data:** demo and test data live only in the `simulation` schema or in test fixtures. No analysis query, ranking or report may read it.
+- **AI:** the language model writes explanations and questions from a stored calculation trace. It never creates a number (every figure is rendered by the app from referenced fields) and never receives personal details.
+- **Privacy:** store personal details only where necessary, use pseudonymous identifiers, keep contact details in the restricted table only, and never put them in logs, exports or prompts.

@@ -1,0 +1,19 @@
+[Unit]
+Description=App Hub (allapps)
+After=network.target
+
+[Service]
+Type=simple
+User=deploy
+Group=deploy
+WorkingDirectory=/apps/allapps/current
+Environment=NODE_ENV=production
+EnvironmentFile=/etc/allapps/environment
+ExecStart=/usr/bin/npm run start --workspace backend
+Restart=on-failure
+RestartSec=3
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

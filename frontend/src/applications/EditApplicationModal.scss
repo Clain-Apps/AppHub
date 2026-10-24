@@ -1,0 +1,77 @@
+@use "../styles/mixins" as *;
+@use "../styles/variables" as *;
+
+.edit-application-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: grid;
+  place-items: center;
+  padding: 1.25rem;
+  background: $color-backdrop;
+  animation: edit-application-fade-in 160ms ease-out;
+}
+
+.edit-application-modal {
+  width: min(100%, 26rem);
+  background: $color-surface;
+  border: 1px solid $color-border;
+  border-radius: 1rem;
+  box-shadow: 0 24px 48px rgba(28, 40, 48, 0.18);
+  animation: edit-application-rise-in 180ms ease-out;
+  @include cq-responsive((padding: 1.6));
+
+  .edit-application-folder {
+    margin: 0;
+    color: $color-text-muted;
+    @include cq-responsive((margin-bottom: 1.2, font-size: 0.95));
+  }
+
+  .edit-application-form {
+    display: grid;
+    @include cq-responsive((gap: 1));
+  }
+
+  .edit-application-preview {
+    width: 100%;
+    aspect-ratio: 16 / 10;
+    object-fit: cover;
+    border: 1px solid $color-border;
+    border-radius: 0.7rem;
+    background: $color-placeholder-fill;
+  }
+
+  .edit-application-preview.is-empty {
+    background:
+      linear-gradient(135deg, rgba(61, 122, 110, 0.08), transparent 55%),
+      $color-placeholder-fill;
+  }
+
+  .edit-application-actions {
+    display: flex;
+    justify-content: flex-end;
+    @include cq-responsive((gap: 0.7, margin-top: 0.4));
+  }
+}
+
+@keyframes edit-application-fade-in {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes edit-application-rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(0.6rem) scale(0.98);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}

@@ -1,0 +1,10 @@
+---
+description: Shared package, backend authority, and where types live
+alwaysApply: false
+globs: "**/*.{ts,tsx}"
+---
+
+- **Cross-app contracts** (derived message types, domain shapes such as `Observation`, `ContributionAssessment` and `SourceRegistryEntry`) live only under the root `shared/` package. Do not duplicate them in `frontend/src` or `backend/src`.
+- **Authoritative business logic** (validation, evidence status, scoring, permission gates) runs on the backend. The frontend sends requests and renders the responses it receives. There is no replicated whole-application state object.
+- **Pure numeric models** used by both the backend and preview screens (comparability, contribution scenarios, experiment metrics) belong in `shared/src` as plain functions with no database dependency, not a second copy under the frontend.
+- The frontend keeps only small, local UI state in context (current view, filters, session) plus the paginated query results it asked for.

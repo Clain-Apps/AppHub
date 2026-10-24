@@ -1,0 +1,10 @@
+# Copy to /etc/allapps/environment on the server. That file is not in git and is not under /apps.
+# Replace example.com with the public domain. PUBLIC_PATH_PREFIX must match APP_NAME in the workflow.
+APPS_DIRECTORY=/apps
+CATALOG_DIRECTORY=/var/lib/allapps/catalog
+FRONTEND_DIRECTORY=/apps/allapps/current/frontend/dist
+PUBLIC_APPLICATION_HOST=example.com
+PUBLIC_PATH_PREFIX=/allapps
+ALLOWED_ORIGINS=https://example.com
+BACKEND_PORT=3001
+LISTEN_HOST=127.0.0.1
